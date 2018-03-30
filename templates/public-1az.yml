@@ -1,0 +1,89 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Generated Template"
+Parameters:
+  cidrBlockVpc:
+    Default: "10.0.0.0/19"
+    Type: String
+    Description: "Enter a valid /19 cidr block."
+    AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/19'
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref cidrBlockVpc
+      Tags:
+        - Key: "Name"
+          Value: !Sub "${AWS::StackName}"
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+  GatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId:
+        Ref: InternetGateway
+      VpcId:
+        Ref: VPC
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: VPC
+      Tags:
+        - Key: "Name"
+          Value: !Sub "${AWS::StackName}-PublicRouteTable"
+  PublicRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId:
+        Ref: InternetGateway
+      RouteTableId:
+        Ref: PublicRouteTable
+  NoInternetRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: VPC
+      Tags:
+        - Key: "Name"
+          Value: !Sub "${AWS::StackName}-NoInternetRouteTable"
+  PublicSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref "VPC"
+      AvailabilityZone: !Join ["", [!Ref "AWS::Region", "a"]]
+      CidrBlock:
+        !Select [0,
+                 !Cidr [!Select [0,
+                                 !Cidr [!Ref "cidrBlockVpc",
+                                        4,
+                                        11]],
+                        8,
+                        8]]
+      Tags:
+        - Key: "Name"
+          Value: !Sub "${AWS::StackName}-PublicSubnetA"
+        - Key: "Layer"
+          Value: "public"
+        - Key: "LayerCidr"
+          Value: !Select [0,
+                          !Cidr [!Ref "cidrBlockVpc",
+                                4,
+                                11]]
+  PublicRouteTableAAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Ref: PublicSubnetA
+      RouteTableId:
+        Ref: PublicRouteTable
+Outputs:
+  PublicSubnetIDs:
+    Description: A list of publicSubnetsIDs
+    Value:
+      !Join
+      - ', '
+      - - !Ref "PublicSubnetA"
+    Export:
+      Name: !Sub "${AWS::StackName}-publicSubnetIDs"

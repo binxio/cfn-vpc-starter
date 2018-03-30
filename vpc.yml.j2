@@ -1,0 +1,174 @@
+{%- set vpc_cidr_block = vpc_cidr_block|default('10.0.0.0/19') %}
+{%- set layers = layers | default(['public', 'private', 'data']) %}
+{%- set azs = azs | default(['a', 'b', 'c']) %}
+{%- set max_subnet_netmask = max_subnet_netmask|default(24) %}
+{%- set min_layers = min_layers|default(4) %}{# min available layers in vpc, max 16 #}
+{%- set min_azs = min_azs|default(8) %}{# min available subnets in layer, max 16 #}
+{#- Do not edit after this line -#}
+{%- set c = [1,1,1,2,2,3,3,3,3,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4] %}
+{%- set vpc_netmask = vpc_cidr_block.split('/')[1] | int %}
+{%- set count_azs = azs|length %}
+{%- set count_layers = layers|length %}
+{%- set layer_netmask = vpc_netmask + c[min_layers] %}
+{%- set subnet_netmask = layer_netmask + c[min_azs] %}
+{%- set subnet_netmask = max_subnet_netmask if subnet_netmask < max_subnet_netmask else subnet_netmask %}
+{%- set public = 'public' %}{# if layer = public, direct internet access #}
+{%- set private = 'private' %}{# if layer = private, internet access using nat gw #}
+{#- Do not edit before this line -#}
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Generated Template"
+Parameters:
+  cidrBlockVpc:
+    Default: "{{ vpc_cidr_block }}"
+    Type: String
+    Description: "Enter a valid /{{ vpc_netmask }} cidr block."
+    AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/{{ vpc_netmask }}'
+Resources:
+{#- VPC Level Resources #}
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref cidrBlockVpc
+      Tags:
+        - Key: "Name"
+          Value: !Sub "${AWS::StackName}"
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+  GatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId:
+        Ref: InternetGateway
+      VpcId:
+        Ref: VPC
+  {{ public|title }}RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: VPC
+      Tags:
+        - Key: "Name"
+          Value: !Sub "${AWS::StackName}-PublicRouteTable"
+  {{ public|title }}Route:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId:
+        Ref: InternetGateway
+      RouteTableId:
+        Ref: {{ public|title }}RouteTable
+  NoInternetRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: VPC
+      Tags:
+        - Key: "Name"
+          Value: !Sub "${AWS::StackName}-NoInternetRouteTable"
+{%- for layer in layers %}
+{%- set layer_key = loop.index0 %}
+{%- for az in azs %}
+  {{ layer|title }}Subnet{{ az|upper }}:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref "VPC"
+      AvailabilityZone: !Join ["", [!Ref "AWS::Region", "{{ az }}"]]
+      CidrBlock:
+        !Select [{{ loop.index0 }},
+                 !Cidr [!Select [{{ layer_key }},
+                                 !Cidr [!Ref "cidrBlockVpc",
+                                        {{ 2**(layer_netmask-vpc_netmask) }},
+                                        {{ 32-layer_netmask }}]],
+                        {{ 2**(subnet_netmask-layer_netmask) }},
+                        {{ 32-subnet_netmask }}]]
+      Tags:
+        - Key: "Name"
+          Value: !Sub "${AWS::StackName}-{{ layer|title }}Subnet{{ az|upper }}"
+        - Key: "Layer"
+          Value: "{{ layer }}"
+        - Key: "LayerCidr"
+          Value: !Select [{{ layer_key }},
+                          !Cidr [!Ref "cidrBlockVpc",
+                                {{ 2**(layer_netmask-vpc_netmask) }},
+                                {{ 32-layer_netmask }}]]
+{%- if layer == public %}
+  {{ layer|title }}RouteTable{{ az|upper }}Assoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Ref: {{ layer|title }}Subnet{{ az|upper }}
+      RouteTableId:
+        Ref: {{ layer|title }}RouteTable
+{%- if private in layers %}
+  NAT{{ az|upper }}:
+    DependsOn: GatewayAttachment
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !Sub "${EIP{{ az|upper }}.AllocationId}"
+      SubnetId:
+        Ref: {{ layer|title }}Subnet{{ az|upper }}
+      Tags:
+        - Key: "Name"
+          Value: !Sub "${AWS::StackName}-NAT{{ az|upper }}"
+  EIP{{ az|upper }}:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+{%- endif %}{#if private in layers#}
+{%- endif %}{#if layer == public#}
+{%- if layer == private %}
+  {{ layer|title }}RouteTable{{ az|upper }}Assoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Ref: {{ layer|title }}Subnet{{ az|upper }}
+      RouteTableId:
+        Ref: {{ layer|title }}RouteTable{{ az|upper }}
+  {{ layer|title }}RouteTable{{ az|upper }}:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: VPC
+      Tags:
+        - Key: "Name"
+          Value: !Sub "${AWS::StackName}-{{ layer|title }}RouteTable{{ az|upper }}"
+        - Key: "Layer"
+          Value: "{{ layer }}"
+  {{ layer|title }}NAT{{ az|upper }}Route:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId:
+        Ref: {{ layer|title }}RouteTable{{ az|upper }}
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId:
+        Ref: NAT{{ az|upper }}
+{%- endif %}
+{%- if layer not in [public, private] %}
+  {{ layer|title }}RouteTable{{ az|upper }}Assoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Ref: {{ layer|title }}Subnet{{ az|upper }}
+      RouteTableId:
+        Ref: NoInternetRouteTable
+{%- endif %}
+{%- endfor %}{#end of azs#}
+{%- endfor %}{#end of layers#}
+Outputs:
+{%- for layer in layers %}
+  {{ layer|title }}SubnetIDs:
+    Description: A list of {{ layer }}SubnetsIDs
+    Value:
+      !Join
+      - ', '
+{%- for az in azs %}
+{%- if loop.first %}
+      - - !Ref "{{ layer|title }}Subnet{{ az|upper }}"
+{%- else %}
+        - !Ref "{{ layer|title }}Subnet{{ az|upper }}"
+{%- endif %}
+{%- endfor %}{#end of azs#}
+    Export:
+      Name: !Sub "${AWS::StackName}-{{ layer }}SubnetIDs"
+{%- endfor %}{#end of layers#}

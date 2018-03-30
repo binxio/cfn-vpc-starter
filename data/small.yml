@@ -1,0 +1,11 @@
+---
+vpc_cidr_block: "10.1.2.0/24"
+layers:
+  - public
+  - private
+  - data
+azs:
+  - a
+  - b
+min_azs: 2
+max_subnet_netmask: 26
