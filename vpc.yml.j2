@@ -4,17 +4,17 @@
 {%- set max_subnet_netmask = max_subnet_netmask|default(24) %}
 {%- set min_layers = min_layers|default(4) %}{# min available layers in vpc, max 16 #}
 {%- set min_azs = min_azs|default(8) %}{# min available subnets in layer, max 16 #}
-{#- Do not edit after this line -#}
 {%- set c = [1,1,1,2,2,3,3,3,3,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4] %}
 {%- set vpc_netmask = vpc_cidr_block.split('/')[1] | int %}
 {%- set count_azs = azs|length %}
 {%- set count_layers = layers|length %}
 {%- set layer_netmask = vpc_netmask + c[min_layers] %}
+{%- set layer_size_mask = 32-layer_netmask %}
 {%- set subnet_netmask = layer_netmask + c[min_azs] %}
+{%- set subnet_size_mask = 32-subnet_netmask %}
 {%- set subnet_netmask = max_subnet_netmask if subnet_netmask < max_subnet_netmask else subnet_netmask %}
 {%- set public = 'public' %}{# if layer = public, direct internet access #}
 {%- set private = 'private' %}{# if layer = private, internet access using nat gw #}
-{#- Do not edit before this line -#}
 ---
 AWSTemplateFormatVersion: "2010-09-09"
 Description: "Generated Template"
@@ -78,10 +78,10 @@ Resources:
         !Select [{{ loop.index0 }},
                  !Cidr [!Select [{{ layer_key }},
                                  !Cidr [!Ref "cidrBlockVpc",
-                                        {{ 2**(layer_netmask-vpc_netmask) }},
-                                        {{ 32-layer_netmask }}]],
-                        {{ 2**(subnet_netmask-layer_netmask) }},
-                        {{ 32-subnet_netmask }}]]
+                                        {{ min_layers }},
+                                        {{ layer_size_mask }}]],
+                        {{ min_azs }},
+                        {{ subnet_size_mask }}]]
       Tags:
         - Key: "Name"
           Value: !Sub "${AWS::StackName}-{{ layer|title }}Subnet{{ az|upper }}"
@@ -90,8 +90,8 @@ Resources:
         - Key: "LayerCidr"
           Value: !Select [{{ layer_key }},
                           !Cidr [!Ref "cidrBlockVpc",
-                                {{ 2**(layer_netmask-vpc_netmask) }},
-                                {{ 32-layer_netmask }}]]
+                                {{ min_layers }},
+                                {{ layer_size_mask }}]]
 {%- if layer == public %}
   {{ layer|title }}RouteTable{{ az|upper }}Assoc:
     Type: AWS::EC2::SubnetRouteTableAssociation
