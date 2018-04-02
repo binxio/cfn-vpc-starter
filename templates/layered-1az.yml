@@ -54,23 +54,30 @@ Resources:
       VpcId: !Ref "VPC"
       AvailabilityZone: !Join ["", [!Ref "AWS::Region", "a"]]
       CidrBlock:
-        !Select [0,
-                 !Cidr [!Select [0,
-                                 !Cidr [!Ref "cidrBlockVpc",
-                                        4,
-                                        11]],
-                        8,
-                        8]]
+        !Select
+        - 0
+        - 'Fn::Cidr':
+            - !Select
+              - 0
+              - 'Fn::Cidr':
+                  - !Ref "cidrBlockVpc"
+                  - 4
+                  - 11
+            - 8
+            - 8
       Tags:
         - Key: "Name"
           Value: !Sub "${AWS::StackName}-PublicSubnetA"
         - Key: "Layer"
           Value: "public"
         - Key: "LayerCidr"
-          Value: !Select [0,
-                          !Cidr [!Ref "cidrBlockVpc",
-                                4,
-                                11]]
+          Value:
+            !Select
+            - 0
+            - 'Fn::Cidr':
+                - !Ref "cidrBlockVpc"
+                - 4
+                - 11
   PublicRouteTableAAssoc:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
@@ -98,23 +105,30 @@ Resources:
       VpcId: !Ref "VPC"
       AvailabilityZone: !Join ["", [!Ref "AWS::Region", "a"]]
       CidrBlock:
-        !Select [0,
-                 !Cidr [!Select [1,
-                                 !Cidr [!Ref "cidrBlockVpc",
-                                        4,
-                                        11]],
-                        8,
-                        8]]
+        !Select
+        - 0
+        - 'Fn::Cidr':
+            - !Select
+              - 1
+              - 'Fn::Cidr':
+                  - !Ref "cidrBlockVpc"
+                  - 4
+                  - 11
+            - 8
+            - 8
       Tags:
         - Key: "Name"
           Value: !Sub "${AWS::StackName}-PrivateSubnetA"
         - Key: "Layer"
           Value: "private"
         - Key: "LayerCidr"
-          Value: !Select [1,
-                          !Cidr [!Ref "cidrBlockVpc",
-                                4,
-                                11]]
+          Value:
+            !Select
+            - 1
+            - 'Fn::Cidr':
+                - !Ref "cidrBlockVpc"
+                - 4
+                - 11
   PrivateRouteTableAAssoc:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
@@ -146,23 +160,30 @@ Resources:
       VpcId: !Ref "VPC"
       AvailabilityZone: !Join ["", [!Ref "AWS::Region", "a"]]
       CidrBlock:
-        !Select [0,
-                 !Cidr [!Select [2,
-                                 !Cidr [!Ref "cidrBlockVpc",
-                                        4,
-                                        11]],
-                        8,
-                        8]]
+        !Select
+        - 0
+        - 'Fn::Cidr':
+            - !Select
+              - 2
+              - 'Fn::Cidr':
+                  - !Ref "cidrBlockVpc"
+                  - 4
+                  - 11
+            - 8
+            - 8
       Tags:
         - Key: "Name"
           Value: !Sub "${AWS::StackName}-DataSubnetA"
         - Key: "Layer"
           Value: "data"
         - Key: "LayerCidr"
-          Value: !Select [2,
-                          !Cidr [!Ref "cidrBlockVpc",
-                                4,
-                                11]]
+          Value:
+            !Select
+            - 2
+            - 'Fn::Cidr':
+                - !Ref "cidrBlockVpc"
+                - 4
+                - 11
   DataRouteTableAAssoc:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:

@@ -14,7 +14,7 @@
 {%- set subnet_size_mask = 32-subnet_netmask %}
 {%- set subnet_netmask = max_subnet_netmask if subnet_netmask < max_subnet_netmask else subnet_netmask %}
 {%- set public = 'public' %}{# if layer = public, direct internet access #}
-{%- set private = 'private' %}{# if layer = private, internet access using nat gw #}
+{%- set private = 'private' %}{# if layer = private, internet access using nat gw -#}
 ---
 AWSTemplateFormatVersion: "2010-09-09"
 Description: "Generated Template"
@@ -75,23 +75,30 @@ Resources:
       VpcId: !Ref "VPC"
       AvailabilityZone: !Join ["", [!Ref "AWS::Region", "{{ az }}"]]
       CidrBlock:
-        !Select [{{ loop.index0 }},
-                 !Cidr [!Select [{{ layer_key }},
-                                 !Cidr [!Ref "cidrBlockVpc",
-                                        {{ min_layers }},
-                                        {{ layer_size_mask }}]],
-                        {{ min_azs }},
-                        {{ subnet_size_mask }}]]
+        !Select
+        - {{ loop.index0 }}
+        - 'Fn::Cidr':
+            - !Select
+              - {{ layer_key }}
+              - 'Fn::Cidr':
+                  - !Ref "cidrBlockVpc"
+                  - {{ min_layers }}
+                  - {{ layer_size_mask }}
+            - {{ min_azs }}
+            - {{ subnet_size_mask }}
       Tags:
         - Key: "Name"
           Value: !Sub "${AWS::StackName}-{{ layer|title }}Subnet{{ az|upper }}"
         - Key: "Layer"
           Value: "{{ layer }}"
         - Key: "LayerCidr"
-          Value: !Select [{{ layer_key }},
-                          !Cidr [!Ref "cidrBlockVpc",
-                                {{ min_layers }},
-                                {{ layer_size_mask }}]]
+          Value:
+            !Select
+            - {{ layer_key }}
+            - 'Fn::Cidr':
+                - !Ref "cidrBlockVpc"
+                - {{ min_layers }}
+                - {{ layer_size_mask }}
 {%- if layer == public %}
   {{ layer|title }}RouteTable{{ az|upper }}Assoc:
     Type: AWS::EC2::SubnetRouteTableAssociation
