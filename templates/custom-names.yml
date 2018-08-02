@@ -4,10 +4,10 @@ AWSTemplateFormatVersion: "2010-09-09"
 Description: "Generated Template for a VPC"
 Parameters:
   cidrBlockVpc:
-    Default: "10.0.0.0/16"
+    Default: "10.0.0.0/20"
     Type: String
-    Description: "Enter a valid /16 cidr block."
-    AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/16'
+    Description: "Enter a valid /20 cidr block."
+    AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/20'
 Resources:
   VPC:
     Type: AWS::EC2::VPC
@@ -25,22 +25,22 @@ Resources:
         Ref: InternetGateway
       VpcId:
         Ref: VPC
-  PublicRouteTable:
+  DmzRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId:
         Ref: VPC
       Tags:
         - Key: "Name"
-          Value: !Sub "${AWS::StackName}-PublicRouteTable"
-  PublicRoute:
+          Value: !Sub "${AWS::StackName}-DmzRouteTable"
+  DmzRoute:
     Type: AWS::EC2::Route
     Properties:
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId:
         Ref: InternetGateway
       RouteTableId:
-        Ref: PublicRouteTable
+        Ref: DmzRouteTable
   NoInternetRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
@@ -49,7 +49,7 @@ Resources:
       Tags:
         - Key: "Name"
           Value: !Sub "${AWS::StackName}-NoInternetRouteTable"
-  PublicSubnetA:
+  DmzSubnetA:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref "VPC"
@@ -63,14 +63,14 @@ Resources:
               - 'Fn::Cidr':
                   - !Ref "cidrBlockVpc"
                   - 4
-                  - 14
+                  - 10
             - 8
-            - 11
+            - 7
       Tags:
         - Key: "Name"
-          Value: !Sub "${AWS::StackName}-PublicSubnetA"
+          Value: !Sub "${AWS::StackName}-DmzSubnetA"
         - Key: "Layer"
-          Value: "public"
+          Value: "dmz"
         - Key: "LayerCidr"
           Value:
             !Select
@@ -78,21 +78,21 @@ Resources:
             - 'Fn::Cidr':
                 - !Ref "cidrBlockVpc"
                 - 4
-                - 14
-  PublicRouteTableAAssoc:
+                - 10
+  DmzRouteTableAAssoc:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId:
-        Ref: PublicSubnetA
+        Ref: DmzSubnetA
       RouteTableId:
-        Ref: PublicRouteTable
+        Ref: DmzRouteTable
   NATA:
     DependsOn: GatewayAttachment
     Type: AWS::EC2::NatGateway
     Properties:
       AllocationId: !Sub "${EIPA.AllocationId}"
       SubnetId:
-        Ref: PublicSubnetA
+        Ref: DmzSubnetA
       Tags:
         - Key: "Name"
           Value: !Sub "${AWS::StackName}-NATA"
@@ -100,7 +100,7 @@ Resources:
     Type: AWS::EC2::EIP
     Properties:
       Domain: vpc
-  PublicSubnetB:
+  DmzSubnetB:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref "VPC"
@@ -114,14 +114,14 @@ Resources:
               - 'Fn::Cidr':
                   - !Ref "cidrBlockVpc"
                   - 4
-                  - 14
+                  - 10
             - 8
-            - 11
+            - 7
       Tags:
         - Key: "Name"
-          Value: !Sub "${AWS::StackName}-PublicSubnetB"
+          Value: !Sub "${AWS::StackName}-DmzSubnetB"
         - Key: "Layer"
-          Value: "public"
+          Value: "dmz"
         - Key: "LayerCidr"
           Value:
             !Select
@@ -129,21 +129,21 @@ Resources:
             - 'Fn::Cidr':
                 - !Ref "cidrBlockVpc"
                 - 4
-                - 14
-  PublicRouteTableBAssoc:
+                - 10
+  DmzRouteTableBAssoc:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId:
-        Ref: PublicSubnetB
+        Ref: DmzSubnetB
       RouteTableId:
-        Ref: PublicRouteTable
+        Ref: DmzRouteTable
   NATB:
     DependsOn: GatewayAttachment
     Type: AWS::EC2::NatGateway
     Properties:
       AllocationId: !Sub "${EIPB.AllocationId}"
       SubnetId:
-        Ref: PublicSubnetB
+        Ref: DmzSubnetB
       Tags:
         - Key: "Name"
           Value: !Sub "${AWS::StackName}-NATB"
@@ -151,7 +151,7 @@ Resources:
     Type: AWS::EC2::EIP
     Properties:
       Domain: vpc
-  PublicSubnetC:
+  DmzSubnetC:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref "VPC"
@@ -165,14 +165,14 @@ Resources:
               - 'Fn::Cidr':
                   - !Ref "cidrBlockVpc"
                   - 4
-                  - 14
+                  - 10
             - 8
-            - 11
+            - 7
       Tags:
         - Key: "Name"
-          Value: !Sub "${AWS::StackName}-PublicSubnetC"
+          Value: !Sub "${AWS::StackName}-DmzSubnetC"
         - Key: "Layer"
-          Value: "public"
+          Value: "dmz"
         - Key: "LayerCidr"
           Value:
             !Select
@@ -180,21 +180,21 @@ Resources:
             - 'Fn::Cidr':
                 - !Ref "cidrBlockVpc"
                 - 4
-                - 14
-  PublicRouteTableCAssoc:
+                - 10
+  DmzRouteTableCAssoc:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId:
-        Ref: PublicSubnetC
+        Ref: DmzSubnetC
       RouteTableId:
-        Ref: PublicRouteTable
+        Ref: DmzRouteTable
   NATC:
     DependsOn: GatewayAttachment
     Type: AWS::EC2::NatGateway
     Properties:
       AllocationId: !Sub "${EIPC.AllocationId}"
       SubnetId:
-        Ref: PublicSubnetC
+        Ref: DmzSubnetC
       Tags:
         - Key: "Name"
           Value: !Sub "${AWS::StackName}-NATC"
@@ -202,7 +202,7 @@ Resources:
     Type: AWS::EC2::EIP
     Properties:
       Domain: vpc
-  PrivateSubnetA:
+  AppSubnetA:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref "VPC"
@@ -216,14 +216,14 @@ Resources:
               - 'Fn::Cidr':
                   - !Ref "cidrBlockVpc"
                   - 4
-                  - 14
+                  - 10
             - 8
-            - 11
+            - 7
       Tags:
         - Key: "Name"
-          Value: !Sub "${AWS::StackName}-PrivateSubnetA"
+          Value: !Sub "${AWS::StackName}-AppSubnetA"
         - Key: "Layer"
-          Value: "private"
+          Value: "app"
         - Key: "LayerCidr"
           Value:
             !Select
@@ -231,33 +231,33 @@ Resources:
             - 'Fn::Cidr':
                 - !Ref "cidrBlockVpc"
                 - 4
-                - 14
-  PrivateRouteTableAAssoc:
+                - 10
+  AppRouteTableAAssoc:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId:
-        Ref: PrivateSubnetA
+        Ref: AppSubnetA
       RouteTableId:
-        Ref: PrivateRouteTableA
-  PrivateRouteTableA:
+        Ref: AppRouteTableA
+  AppRouteTableA:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId:
         Ref: VPC
       Tags:
         - Key: "Name"
-          Value: !Sub "${AWS::StackName}-PrivateRouteTableA"
+          Value: !Sub "${AWS::StackName}-AppRouteTableA"
         - Key: "Layer"
-          Value: "private"
-  PrivateNATARoute:
+          Value: "app"
+  AppNATARoute:
     Type: AWS::EC2::Route
     Properties:
       RouteTableId:
-        Ref: PrivateRouteTableA
+        Ref: AppRouteTableA
       DestinationCidrBlock: 0.0.0.0/0
       NatGatewayId:
         Ref: NATA
-  PrivateSubnetB:
+  AppSubnetB:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref "VPC"
@@ -271,14 +271,14 @@ Resources:
               - 'Fn::Cidr':
                   - !Ref "cidrBlockVpc"
                   - 4
-                  - 14
+                  - 10
             - 8
-            - 11
+            - 7
       Tags:
         - Key: "Name"
-          Value: !Sub "${AWS::StackName}-PrivateSubnetB"
+          Value: !Sub "${AWS::StackName}-AppSubnetB"
         - Key: "Layer"
-          Value: "private"
+          Value: "app"
         - Key: "LayerCidr"
           Value:
             !Select
@@ -286,33 +286,33 @@ Resources:
             - 'Fn::Cidr':
                 - !Ref "cidrBlockVpc"
                 - 4
-                - 14
-  PrivateRouteTableBAssoc:
+                - 10
+  AppRouteTableBAssoc:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId:
-        Ref: PrivateSubnetB
+        Ref: AppSubnetB
       RouteTableId:
-        Ref: PrivateRouteTableB
-  PrivateRouteTableB:
+        Ref: AppRouteTableB
+  AppRouteTableB:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId:
         Ref: VPC
       Tags:
         - Key: "Name"
-          Value: !Sub "${AWS::StackName}-PrivateRouteTableB"
+          Value: !Sub "${AWS::StackName}-AppRouteTableB"
         - Key: "Layer"
-          Value: "private"
-  PrivateNATBRoute:
+          Value: "app"
+  AppNATBRoute:
     Type: AWS::EC2::Route
     Properties:
       RouteTableId:
-        Ref: PrivateRouteTableB
+        Ref: AppRouteTableB
       DestinationCidrBlock: 0.0.0.0/0
       NatGatewayId:
         Ref: NATB
-  PrivateSubnetC:
+  AppSubnetC:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref "VPC"
@@ -326,14 +326,14 @@ Resources:
               - 'Fn::Cidr':
                   - !Ref "cidrBlockVpc"
                   - 4
-                  - 14
+                  - 10
             - 8
-            - 11
+            - 7
       Tags:
         - Key: "Name"
-          Value: !Sub "${AWS::StackName}-PrivateSubnetC"
+          Value: !Sub "${AWS::StackName}-AppSubnetC"
         - Key: "Layer"
-          Value: "private"
+          Value: "app"
         - Key: "LayerCidr"
           Value:
             !Select
@@ -341,171 +341,50 @@ Resources:
             - 'Fn::Cidr':
                 - !Ref "cidrBlockVpc"
                 - 4
-                - 14
-  PrivateRouteTableCAssoc:
+                - 10
+  AppRouteTableCAssoc:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId:
-        Ref: PrivateSubnetC
+        Ref: AppSubnetC
       RouteTableId:
-        Ref: PrivateRouteTableC
-  PrivateRouteTableC:
+        Ref: AppRouteTableC
+  AppRouteTableC:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId:
         Ref: VPC
       Tags:
         - Key: "Name"
-          Value: !Sub "${AWS::StackName}-PrivateRouteTableC"
+          Value: !Sub "${AWS::StackName}-AppRouteTableC"
         - Key: "Layer"
-          Value: "private"
-  PrivateNATCRoute:
+          Value: "app"
+  AppNATCRoute:
     Type: AWS::EC2::Route
     Properties:
       RouteTableId:
-        Ref: PrivateRouteTableC
+        Ref: AppRouteTableC
       DestinationCidrBlock: 0.0.0.0/0
       NatGatewayId:
         Ref: NATC
-  DataSubnetA:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId: !Ref "VPC"
-      AvailabilityZone: !Join ["", [!Ref "AWS::Region", "a"]]
-      CidrBlock:
-        !Select
-        - 0
-        - 'Fn::Cidr':
-            - !Select
-              - 2
-              - 'Fn::Cidr':
-                  - !Ref "cidrBlockVpc"
-                  - 4
-                  - 14
-            - 8
-            - 11
-      Tags:
-        - Key: "Name"
-          Value: !Sub "${AWS::StackName}-DataSubnetA"
-        - Key: "Layer"
-          Value: "data"
-        - Key: "LayerCidr"
-          Value:
-            !Select
-            - 2
-            - 'Fn::Cidr':
-                - !Ref "cidrBlockVpc"
-                - 4
-                - 14
-  DataRouteTableAAssoc:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      SubnetId:
-        Ref: DataSubnetA
-      RouteTableId:
-        Ref: NoInternetRouteTable
-  DataSubnetB:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId: !Ref "VPC"
-      AvailabilityZone: !Join ["", [!Ref "AWS::Region", "b"]]
-      CidrBlock:
-        !Select
-        - 1
-        - 'Fn::Cidr':
-            - !Select
-              - 2
-              - 'Fn::Cidr':
-                  - !Ref "cidrBlockVpc"
-                  - 4
-                  - 14
-            - 8
-            - 11
-      Tags:
-        - Key: "Name"
-          Value: !Sub "${AWS::StackName}-DataSubnetB"
-        - Key: "Layer"
-          Value: "data"
-        - Key: "LayerCidr"
-          Value:
-            !Select
-            - 2
-            - 'Fn::Cidr':
-                - !Ref "cidrBlockVpc"
-                - 4
-                - 14
-  DataRouteTableBAssoc:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      SubnetId:
-        Ref: DataSubnetB
-      RouteTableId:
-        Ref: NoInternetRouteTable
-  DataSubnetC:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId: !Ref "VPC"
-      AvailabilityZone: !Join ["", [!Ref "AWS::Region", "c"]]
-      CidrBlock:
-        !Select
-        - 2
-        - 'Fn::Cidr':
-            - !Select
-              - 2
-              - 'Fn::Cidr':
-                  - !Ref "cidrBlockVpc"
-                  - 4
-                  - 14
-            - 8
-            - 11
-      Tags:
-        - Key: "Name"
-          Value: !Sub "${AWS::StackName}-DataSubnetC"
-        - Key: "Layer"
-          Value: "data"
-        - Key: "LayerCidr"
-          Value:
-            !Select
-            - 2
-            - 'Fn::Cidr':
-                - !Ref "cidrBlockVpc"
-                - 4
-                - 14
-  DataRouteTableCAssoc:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      SubnetId:
-        Ref: DataSubnetC
-      RouteTableId:
-        Ref: NoInternetRouteTable
 Outputs:
-  PublicSubnetIDs:
-    Description: A list of publicSubnetsIDs
+  DmzSubnetIDs:
+    Description: A list of dmzSubnetsIDs
     Value:
       !Join
       - ', '
-      - - !Ref "PublicSubnetA"
-        - !Ref "PublicSubnetB"
-        - !Ref "PublicSubnetC"
+      - - !Ref "DmzSubnetA"
+        - !Ref "DmzSubnetB"
+        - !Ref "DmzSubnetC"
     Export:
-      Name: !Sub "${AWS::StackName}-publicSubnetIDs"
-  PrivateSubnetIDs:
-    Description: A list of privateSubnetsIDs
+      Name: !Sub "${AWS::StackName}-dmzSubnetIDs"
+  AppSubnetIDs:
+    Description: A list of appSubnetsIDs
     Value:
       !Join
       - ', '
-      - - !Ref "PrivateSubnetA"
-        - !Ref "PrivateSubnetB"
-        - !Ref "PrivateSubnetC"
+      - - !Ref "AppSubnetA"
+        - !Ref "AppSubnetB"
+        - !Ref "AppSubnetC"
     Export:
-      Name: !Sub "${AWS::StackName}-privateSubnetIDs"
-  DataSubnetIDs:
-    Description: A list of dataSubnetsIDs
-    Value:
-      !Join
-      - ', '
-      - - !Ref "DataSubnetA"
-        - !Ref "DataSubnetB"
-        - !Ref "DataSubnetC"
-    Export:
-      Name: !Sub "${AWS::StackName}-dataSubnetIDs"
+      Name: !Sub "${AWS::StackName}-appSubnetIDs"

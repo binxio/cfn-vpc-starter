@@ -8,8 +8,9 @@
 {%- set layer_size_mask = 32-layer_netmask %}
 {%- set azs_max = 2**(subnet_netmask-layer_netmask) %}
 {%- set subnet_size_mask = 32-subnet_netmask %}
-{%- set public = 'public' %}{# if layer = public, direct internet access #}
-{%- set private = 'private' %}{# if layer = private, internet access using nat gw -#}
+{%- set public = public | default('public') %}
+{%- set private = private | default('private') %}
+{%- set data = data | default('data') %}
 ---
 AWSTemplateFormatVersion: "2010-09-09"
 Description: "Generated Template for a VPC"
@@ -44,7 +45,7 @@ Resources:
         Ref: VPC
       Tags:
         - Key: "Name"
-          Value: !Sub "${AWS::StackName}-PublicRouteTable"
+          Value: !Sub "${AWS::StackName}-{{ public|title }}RouteTable"
   {{ public|title }}Route:
     Type: AWS::EC2::Route
     Properties:
@@ -102,7 +103,7 @@ Resources:
         Ref: {{ layer|title }}Subnet{{ az|upper }}
       RouteTableId:
         Ref: {{ layer|title }}RouteTable
-{%- if private in layers %}
+{%- if private in layers %}{#deploy only if natted_layers are present#}
   NAT{{ az|upper }}:
     DependsOn: GatewayAttachment
     Type: AWS::EC2::NatGateway
@@ -137,6 +138,7 @@ Resources:
           Value: !Sub "${AWS::StackName}-{{ layer|title }}RouteTable{{ az|upper }}"
         - Key: "Layer"
           Value: "{{ layer }}"
+{%- if public in layers %}
   {{ layer|title }}NAT{{ az|upper }}Route:
     Type: AWS::EC2::Route
     Properties:
@@ -145,8 +147,9 @@ Resources:
       DestinationCidrBlock: 0.0.0.0/0
       NatGatewayId:
         Ref: NAT{{ az|upper }}
-{%- endif %}
-{%- if layer not in [public, private] %}
+{%- endif %}{#if public in layers#}
+{%- endif %}{#if layer == private#}
+{%- if layer == data %}
   {{ layer|title }}RouteTable{{ az|upper }}Assoc:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
@@ -154,7 +157,7 @@ Resources:
         Ref: {{ layer|title }}Subnet{{ az|upper }}
       RouteTableId:
         Ref: NoInternetRouteTable
-{%- endif %}
+{%- endif %}{#if layer == data#}
 {%- endfor %}{#end of azs#}
 {%- endfor %}{#end of layers#}
 Outputs:

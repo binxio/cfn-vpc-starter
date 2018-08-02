@@ -49,7 +49,7 @@ Resources:
       Tags:
         - Key: "Name"
           Value: !Sub "${AWS::StackName}-NoInternetRouteTable"
-  PublicSubnetA:
+  PrivateSubnetA:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref "VPC"
@@ -68,9 +68,9 @@ Resources:
             - 8
       Tags:
         - Key: "Name"
-          Value: !Sub "${AWS::StackName}-PublicSubnetA"
+          Value: !Sub "${AWS::StackName}-PrivateSubnetA"
         - Key: "Layer"
-          Value: "public"
+          Value: "private"
         - Key: "LayerCidr"
           Value:
             !Select
@@ -79,19 +79,29 @@ Resources:
                 - !Ref "cidrBlockVpc"
                 - 4
                 - 11
-  PublicRouteTableAAssoc:
+  PrivateRouteTableAAssoc:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId:
-        Ref: PublicSubnetA
+        Ref: PrivateSubnetA
       RouteTableId:
-        Ref: PublicRouteTable
+        Ref: PrivateRouteTableA
+  PrivateRouteTableA:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: VPC
+      Tags:
+        - Key: "Name"
+          Value: !Sub "${AWS::StackName}-PrivateRouteTableA"
+        - Key: "Layer"
+          Value: "private"
 Outputs:
-  PublicSubnetIDs:
-    Description: A list of publicSubnetsIDs
+  PrivateSubnetIDs:
+    Description: A list of privateSubnetsIDs
     Value:
       !Join
       - ', '
-      - - !Ref "PublicSubnetA"
+      - - !Ref "PrivateSubnetA"
     Export:
-      Name: !Sub "${AWS::StackName}-publicSubnetIDs"
+      Name: !Sub "${AWS::StackName}-privateSubnetIDs"

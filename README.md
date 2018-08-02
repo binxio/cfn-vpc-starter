@@ -15,14 +15,18 @@ A picture is worth a thousand words (even in Yaml). This diagram shows the defau
 
 ## Assumptions (a.k.a. Requirements)
 
-* Based on the number of AZs to span (a, b, c, etc) and the number of desired layers (public, private, data), the optimal density is chosen by the script. You can force this to reserve future expansion for more AZs or more layers. (`layer_netmask: 20` and `subnet_netmask: 24`)
 * You only specify the VPC Cidr block, all other Cidr Blocks are generated based on the VPC Cidr Block. This is different from many other templates, where you have to calculate and specify the Cidr Blocks for each Subnet.
+* Based on the number of AZs to span (a, b, c, etc) and the number of desired layers (public, private, data), the optimal density is chosen by the script. You can force this to reserve future expansion for more AZs or more layers. (`layer_netmask: 20` and `subnet_netmask: 24`)
 * You specify the Availability Zones (AZs) to deploy subnets in. Some regions have just 2 AZs, others have 3 or 5. You could generate a starter template for any region. In the examples a mix is available. Remember, a Subnet cannot span multiple AZs.
 * The stack always creates a public subnet including an internet gateway. You should never remove the public subnet when using this starter template. If your use case does not allow to deploy a public subnet, find another starter template.
 * Optionally a private subnet can be deployed, in that case in each AZ a NAT GW is deployed.
 * Optionally a third subnet can be deployed, for example "data". This subnet has no internet connection which is a best practice for RDS. These Data Subnets can be marked as RDS Data Subnets.
 * Avoid Duplicate Code. Default cloudformation has a lot of duplicate code. Which means if you need to add a tag to all subnets, you have to add it 9 times. Using the jinja2 template, it's just one.
 * The generated template is valid YAML, and should work natively with any other tool. In other words, you could update the jinja2 template, generate the template just once and use the result and forget this generator. There are also tools like Ansible and Sceptre which support Jinja2 templates. (I'll test these tools some time, and update accordingly.)
+
+## Limitations
+
+* More than one public, private or data layer is not possible.
 
 ## Defaults
 
