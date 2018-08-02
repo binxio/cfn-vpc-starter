@@ -8,6 +8,5 @@ azs:
   - a
   - b
   - c
-  - d
-  - e
+layer_netmask: 20
 subnet_netmask: 24

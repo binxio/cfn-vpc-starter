@@ -7,5 +7,3 @@ layers:
 azs:
   - a
   - b
-min_azs: 2
-max_subnet_netmask: 26

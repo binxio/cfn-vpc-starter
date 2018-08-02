@@ -6,3 +6,5 @@ jinja2 vpc.yml.j2 data/layered-5az.yml --format=yaml > templates/layered-5az.yml
 jinja2 vpc.yml.j2 data/large.yml --format=yaml > templates/large.yml
 jinja2 vpc.yml.j2 data/small.yml --format=yaml > templates/small.yml
 jinja2 vpc.yml.j2 data/default.yml --format=yaml > templates/default.yml
+jinja2 vpc.yml.j2 data/2-layer-3az.yml --format=yaml > templates/2-layer-3az.yml
+jinja2 vpc.yml.j2 data/large-fixed-24.yml --format=yaml > templates/large-fixed-24.yml

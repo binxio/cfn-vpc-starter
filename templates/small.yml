@@ -1,6 +1,6 @@
 ---
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "Generated Template"
+Description: "Generated Template for a VPC"
 Parameters:
   cidrBlockVpc:
     Default: "10.1.2.0/24"
@@ -63,8 +63,8 @@ Resources:
                   - !Ref "cidrBlockVpc"
                   - 4
                   - 6
-            - 2
-            - 5
+            - 8
+            - 3
       Tags:
         - Key: "Name"
           Value: !Sub "${AWS::StackName}-PublicSubnetA"
@@ -114,8 +114,8 @@ Resources:
                   - !Ref "cidrBlockVpc"
                   - 4
                   - 6
-            - 2
-            - 5
+            - 8
+            - 3
       Tags:
         - Key: "Name"
           Value: !Sub "${AWS::StackName}-PublicSubnetB"
@@ -165,8 +165,8 @@ Resources:
                   - !Ref "cidrBlockVpc"
                   - 4
                   - 6
-            - 2
-            - 5
+            - 8
+            - 3
       Tags:
         - Key: "Name"
           Value: !Sub "${AWS::StackName}-PrivateSubnetA"
@@ -220,8 +220,8 @@ Resources:
                   - !Ref "cidrBlockVpc"
                   - 4
                   - 6
-            - 2
-            - 5
+            - 8
+            - 3
       Tags:
         - Key: "Name"
           Value: !Sub "${AWS::StackName}-PrivateSubnetB"
@@ -275,8 +275,8 @@ Resources:
                   - !Ref "cidrBlockVpc"
                   - 4
                   - 6
-            - 2
-            - 5
+            - 8
+            - 3
       Tags:
         - Key: "Name"
           Value: !Sub "${AWS::StackName}-DataSubnetA"
@@ -312,8 +312,8 @@ Resources:
                   - !Ref "cidrBlockVpc"
                   - 4
                   - 6
-            - 2
-            - 5
+            - 8
+            - 3
       Tags:
         - Key: "Name"
           Value: !Sub "${AWS::StackName}-DataSubnetB"

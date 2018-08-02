@@ -21,4 +21,4 @@ azs:
   - i
   - j
   - k
-max_subnet_netmask: 19
+subnet_netmask: 21

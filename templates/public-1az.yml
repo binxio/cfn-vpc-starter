@@ -1,6 +1,6 @@
 ---
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "Generated Template"
+Description: "Generated Template for a VPC"
 Parameters:
   cidrBlockVpc:
     Default: "10.0.0.0/19"

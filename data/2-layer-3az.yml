@@ -8,6 +8,3 @@ azs:
   - a
   - b
   - c
-  - d
-  - e
-subnet_netmask: 24
