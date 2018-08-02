@@ -15,12 +15,12 @@ A picture is worth a thousand words (even in Yaml). This diagram shows the defau
 
 ## Assumptions (a.k.a. Requirements)
 
+* Based on the number of AZs to span (a, b, c, etc) and the number of desired layers (public, private, data), the optimal density is chosen by the script. You can force this to reserve future expansion for more AZs or more layers. (`layer_netmask: 20` and `subnet_netmask: 24`)
 * You only specify the VPC Cidr block, all other Cidr Blocks are generated based on the VPC Cidr Block. This is different from many other templates, where you have to calculate and specify the Cidr Blocks for each Subnet.
 * You specify the Availability Zones (AZs) to deploy subnets in. Some regions have just 2 AZs, others have 3 or 5. You could generate a starter template for any region. In the examples a mix is available. Remember, a Subnet cannot span multiple AZs.
 * The stack always creates a public subnet including an internet gateway. You should never remove the public subnet when using this starter template. If your use case does not allow to deploy a public subnet, find another starter template.
 * Optionally a private subnet can be deployed, in that case in each AZ a NAT GW is deployed.
 * Optionally a third subnet can be deployed, for example "data". This subnet has no internet connection which is a best practice for RDS. These Data Subnets can be marked as RDS Data Subnets.
-* The smallest Cidr Block for Subnets in this script is /24 by default. For almost all use cases 250 ip addresses in one Subnet is more than enough. As a result, the Route Tables and Logs with IP addresses become easier to read.
 * Avoid Duplicate Code. Default cloudformation has a lot of duplicate code. Which means if you need to add a tag to all subnets, you have to add it 9 times. Using the jinja2 template, it's just one.
 * The generated template is valid YAML, and should work natively with any other tool. In other words, you could update the jinja2 template, generate the template just once and use the result and forget this generator. There are also tools like Ansible and Sceptre which support Jinja2 templates. (I'll test these tools some time, and update accordingly.)
 
@@ -39,13 +39,20 @@ azs:
   - a
   - b
   - c
-max_subnet_netmask: 24
 ```
 
 * **vpc_cidr_block**. See this as the "Default VPC". For any other VPC, production or just a sandbox, you should pick your own Cidr Block. There are thousands of them available, as long as you use /19. If you increase this number, remember to increase the max_subnet_netmask accordingly. If you decrease this number, you could set the max_subnet_netmask to a lower number as well, giving you more available IP addresses per Subnet.
 * **layers**. To deploy workloads to AWS, public, private and data are quite common "layers". I don't think this will change very often, so consider this the default. Some organisations deploy multiple stacks in one VPC and each stack has it's own Subnet(s). For this use case, you cannot use this template.
 * **azs**. Almost all Regions have 3 AZs. Some have 2, in that case remove the 'c'. Some have '5', but keep in mind you have to design for costs. With sufficient workloads, small instances and least desired down time, 5 is often cheaper than 3.
-* **max_subnet_netmask**. I like /24, because the first 3 octets are the same for each IP address in the same host.
+
+### Custom reservations
+
+When creating a /16 vpc with just 2 layers and 2 azs, will result in very large subnets. By adding the following rules, a reservation is made for future changes. If you later change the layers from 2 to 3 and azs to 3 or even 5, this can easily be updated.
+
+```
+layer_netmask: 20
+subnet_netmask: 24
+```
 
 ## Examples
 
@@ -64,7 +71,7 @@ I've created a couple of common setups.
 To generate a Cloudformation Template:
 
 ```
-pip3 install jinja2
+pip install jinja2
 jinja2 vpc.yml.j2 data/small.yml --format=yaml > templates/small.yml
 ```
 
