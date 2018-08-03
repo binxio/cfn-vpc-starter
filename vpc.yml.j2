@@ -20,6 +20,11 @@ Parameters:
     Type: String
     Description: "Enter a valid /{{ vpc_netmask }} cidr block."
     AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/{{ vpc_netmask }}'
+  yourHomeIPRange:
+    Default: "0.0.0.0/0"
+    Type: String
+    Description: "Enter a valid cidr block to allow traffic to SSH."
+    AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/\d{1,2}'
 Resources:
 {#- VPC Level Resources #}
   VPC:
@@ -62,7 +67,174 @@ Resources:
       Tags:
         - Key: "Name"
           Value: !Sub "${AWS::StackName}-NoInternetRouteTable"
+  BlockInboundDefaultNetworkAcl:
+    Type: "AWS::EC2::NetworkAclEntry"
+    Properties:
+      NetworkAclId: !GetAtt VPC.DefaultNetworkAcl
+      RuleNumber: 1
+      Protocol: -1
+      RuleAction: "deny"
+      Egress: False
+      CidrBlock: "0.0.0.0/0"
+      PortRange:
+        From: 0
+        To: 65535
+  BlockOutboundDefaultNetworkAcl:
+    Type: "AWS::EC2::NetworkAclEntry"
+    Properties:
+      NetworkAclId: !GetAtt VPC.DefaultNetworkAcl
+      RuleNumber: 1
+      Protocol: -1
+      RuleAction: "deny"
+      Egress: True
+      CidrBlock: "0.0.0.0/0"
+      PortRange:
+        From: 0
+        To: 65535
 {%- for layer in layers %}
+  {{ layer|title }}NetworkAcl:
+    Type: AWS::EC2::NetworkAcl
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: "Name"
+          Value: !Sub "${AWS::StackName}-{{ layer|title }}"
+{%- if layer == public %}
+  Inbound{{ layer|title }}NetworkAclEntryHTTP:
+    Type: "AWS::EC2::NetworkAclEntry"
+    Properties:
+      NetworkAclId:
+        Ref: "{{ layer|title }}NetworkAcl"
+      RuleNumber: 100
+      Protocol: 6
+      RuleAction: "allow"
+      Egress: False
+      CidrBlock: "0.0.0.0/0"
+      PortRange:
+        From: 80
+        To: 80
+  Inbound{{ layer|title }}NetworkAclEntryHTTPS:
+    Type: "AWS::EC2::NetworkAclEntry"
+    Properties:
+      NetworkAclId:
+        Ref: "{{ layer|title }}NetworkAcl"
+      RuleNumber: 110
+      Protocol: 6
+      RuleAction: "allow"
+      Egress: False
+      CidrBlock: "0.0.0.0/0"
+      PortRange:
+        From: 443
+        To: 443
+  Inbound{{ layer|title }}NetworkAclEntrySSH:
+    Type: "AWS::EC2::NetworkAclEntry"
+    Properties:
+      NetworkAclId:
+        Ref: "{{ layer|title }}NetworkAcl"
+      RuleNumber: 120
+      Protocol: 6
+      RuleAction: "allow"
+      Egress: False
+      CidrBlock: !Ref yourHomeIPRange
+      PortRange:
+        From: 22
+        To: 22
+  Inbound{{ layer|title }}NetworkAclEntryRDP:
+    Type: "AWS::EC2::NetworkAclEntry"
+    Properties:
+      NetworkAclId:
+        Ref: "{{ layer|title }}NetworkAcl"
+      RuleNumber: 130
+      Protocol: 6
+      RuleAction: "allow"
+      Egress: False
+      CidrBlock: !Ref yourHomeIPRange
+      PortRange:
+        From: 3389
+        To: 3389
+  Inbound{{ layer|title }}NetworkAclEntryHighPorts:
+    Type: "AWS::EC2::NetworkAclEntry"
+    Properties:
+      NetworkAclId:
+        Ref: "{{ layer|title }}NetworkAcl"
+      RuleNumber: 140
+      Protocol: 6
+      RuleAction: "allow"
+      Egress: False
+      CidrBlock: "0.0.0.0/0"
+      PortRange:
+        From: 1024
+        To: 65535
+  Outbound{{ layer|title }}NetworkAclEntry:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId:
+        Ref: "{{ layer|title }}NetworkAcl"
+      RuleNumber: 100
+      Protocol: -1
+      RuleAction: "allow"
+      Egress: True
+      CidrBlock: "0.0.0.0/0"
+      PortRange:
+        From: 0
+        To: 65535
+{%- endif %}{#if layer == public#}
+{%- if layer == private %}
+  Inbound{{ layer|title }}NetworkAclEntry:
+    Type: "AWS::EC2::NetworkAclEntry"
+    Properties:
+      NetworkAclId:
+        Ref: "{{ layer|title }}NetworkAcl"
+      RuleNumber: 100
+      Protocol: -1
+      RuleAction: "allow"
+      Egress: False
+      CidrBlock: !Ref cidrBlockVpc
+      PortRange:
+        From: 0
+        To: 65535
+  Outbound{{ layer|title }}NetworkAclEntry:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId:
+        Ref: "{{ layer|title }}NetworkAcl"
+      RuleNumber: 100
+      Protocol: -1
+      RuleAction: "allow"
+      Egress: True
+      CidrBlock: 0.0.0.0/0
+      PortRange:
+        From: 0
+        To: 65535
+{%- endif %}{#if layer == private #}
+{%- if layer == data %}
+  Inbound{{ layer|title }}NetworkAclEntry:
+    Type: "AWS::EC2::NetworkAclEntry"
+    Properties:
+      NetworkAclId:
+        Ref: "{{ layer|title }}NetworkAcl"
+      RuleNumber: 100
+      Protocol: -1
+      RuleAction: "allow"
+      Egress: False
+      CidrBlock: !Ref cidrBlockVpc
+      PortRange:
+        From: 0
+        To: 65535
+  Outbound{{ layer|title }}NetworkAclEntry:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId:
+        Ref: "{{ layer|title }}NetworkAcl"
+      RuleNumber: 100
+      Protocol: -1
+      RuleAction: "allow"
+      Egress: True
+      CidrBlock: !Ref cidrBlockVpc
+      PortRange:
+        From: 0
+        To: 65535
+{%- endif %}{#if layer == data #}
 {%- set layer_key = loop.index0 %}
 {%- for az in azs %}
   {{ layer|title }}Subnet{{ az|upper }}:
@@ -95,6 +267,13 @@ Resources:
                 - !Ref "cidrBlockVpc"
                 - {{ layers_max }}
                 - {{ layer_size_mask }}
+  {{ layer|title }}Subnet{{ az|upper }}NetworkAclAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      SubnetId:
+        Ref: {{ layer|title }}Subnet{{ az|upper }}
+      NetworkAclId:
+        Ref: {{ layer|title }}NetworkAcl
 {%- if layer == public %}
   {{ layer|title }}RouteTable{{ az|upper }}Assoc:
     Type: AWS::EC2::SubnetRouteTableAssociation
@@ -103,7 +282,7 @@ Resources:
         Ref: {{ layer|title }}Subnet{{ az|upper }}
       RouteTableId:
         Ref: {{ layer|title }}RouteTable
-{%- if private in layers %}{#deploy only if natted_layers are present#}
+{%- if private in layers %}{#deploy only if private layers are present#}
   NAT{{ az|upper }}:
     DependsOn: GatewayAttachment
     Type: AWS::EC2::NatGateway
@@ -138,7 +317,7 @@ Resources:
           Value: !Sub "${AWS::StackName}-{{ layer|title }}RouteTable{{ az|upper }}"
         - Key: "Layer"
           Value: "{{ layer }}"
-{%- if public in layers %}
+{%- if public in layers %}{#deploy only if public layers are present#}
   {{ layer|title }}NAT{{ az|upper }}Route:
     Type: AWS::EC2::Route
     Properties:
@@ -158,9 +337,14 @@ Resources:
       RouteTableId:
         Ref: NoInternetRouteTable
 {%- endif %}{#if layer == data#}
-{%- endfor %}{#end of azs#}
-{%- endfor %}{#end of layers#}
+{%- endfor %}{#end of azs loop#}
+{%- endfor %}{#end of layers loop#}
 Outputs:
+  VPCID:
+    Description: The VPC ID
+    Value: !Ref VPC
+    Export:
+      Name: !Sub "${AWS::StackName}-VPCID"
 {%- for layer in layers %}
   {{ layer|title }}SubnetIDs:
     Description: A list of {{ layer }}SubnetsIDs

@@ -8,6 +8,11 @@ Parameters:
     Type: String
     Description: "Enter a valid /19 cidr block."
     AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/19'
+  yourHomeIPRange:
+    Default: "0.0.0.0/0"
+    Type: String
+    Description: "Enter a valid cidr block to allow traffic to SSH."
+    AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/\d{1,2}'
 Resources:
   VPC:
     Type: AWS::EC2::VPC
@@ -49,6 +54,115 @@ Resources:
       Tags:
         - Key: "Name"
           Value: !Sub "${AWS::StackName}-NoInternetRouteTable"
+  BlockInboundDefaultNetworkAcl:
+    Type: "AWS::EC2::NetworkAclEntry"
+    Properties:
+      NetworkAclId: !GetAtt VPC.DefaultNetworkAcl
+      RuleNumber: 1
+      Protocol: -1
+      RuleAction: "deny"
+      Egress: False
+      CidrBlock: "0.0.0.0/0"
+      PortRange:
+        From: 0
+        To: 65535
+  BlockOutboundDefaultNetworkAcl:
+    Type: "AWS::EC2::NetworkAclEntry"
+    Properties:
+      NetworkAclId: !GetAtt VPC.DefaultNetworkAcl
+      RuleNumber: 1
+      Protocol: -1
+      RuleAction: "deny"
+      Egress: True
+      CidrBlock: "0.0.0.0/0"
+      PortRange:
+        From: 0
+        To: 65535
+  PublicNetworkAcl:
+    Type: AWS::EC2::NetworkAcl
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: "Name"
+          Value: !Sub "${AWS::StackName}-Public"
+  InboundPublicNetworkAclEntryHTTP:
+    Type: "AWS::EC2::NetworkAclEntry"
+    Properties:
+      NetworkAclId:
+        Ref: "PublicNetworkAcl"
+      RuleNumber: 100
+      Protocol: 6
+      RuleAction: "allow"
+      Egress: False
+      CidrBlock: "0.0.0.0/0"
+      PortRange:
+        From: 80
+        To: 80
+  InboundPublicNetworkAclEntryHTTPS:
+    Type: "AWS::EC2::NetworkAclEntry"
+    Properties:
+      NetworkAclId:
+        Ref: "PublicNetworkAcl"
+      RuleNumber: 110
+      Protocol: 6
+      RuleAction: "allow"
+      Egress: False
+      CidrBlock: "0.0.0.0/0"
+      PortRange:
+        From: 443
+        To: 443
+  InboundPublicNetworkAclEntrySSH:
+    Type: "AWS::EC2::NetworkAclEntry"
+    Properties:
+      NetworkAclId:
+        Ref: "PublicNetworkAcl"
+      RuleNumber: 120
+      Protocol: 6
+      RuleAction: "allow"
+      Egress: False
+      CidrBlock: !Ref yourHomeIPRange
+      PortRange:
+        From: 22
+        To: 22
+  InboundPublicNetworkAclEntryRDP:
+    Type: "AWS::EC2::NetworkAclEntry"
+    Properties:
+      NetworkAclId:
+        Ref: "PublicNetworkAcl"
+      RuleNumber: 130
+      Protocol: 6
+      RuleAction: "allow"
+      Egress: False
+      CidrBlock: !Ref yourHomeIPRange
+      PortRange:
+        From: 3389
+        To: 3389
+  InboundPublicNetworkAclEntryHighPorts:
+    Type: "AWS::EC2::NetworkAclEntry"
+    Properties:
+      NetworkAclId:
+        Ref: "PublicNetworkAcl"
+      RuleNumber: 140
+      Protocol: 6
+      RuleAction: "allow"
+      Egress: False
+      CidrBlock: "0.0.0.0/0"
+      PortRange:
+        From: 1024
+        To: 65535
+  OutboundPublicNetworkAclEntry:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId:
+        Ref: "PublicNetworkAcl"
+      RuleNumber: 100
+      Protocol: -1
+      RuleAction: "allow"
+      Egress: True
+      CidrBlock: "0.0.0.0/0"
+      PortRange:
+        From: 0
+        To: 65535
   PublicSubnetA:
     Type: AWS::EC2::Subnet
     Properties:
@@ -79,6 +193,13 @@ Resources:
                 - !Ref "cidrBlockVpc"
                 - 4
                 - 11
+  PublicSubnetANetworkAclAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      SubnetId:
+        Ref: PublicSubnetA
+      NetworkAclId:
+        Ref: PublicNetworkAcl
   PublicRouteTableAAssoc:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
@@ -130,6 +251,13 @@ Resources:
                 - !Ref "cidrBlockVpc"
                 - 4
                 - 11
+  PublicSubnetBNetworkAclAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      SubnetId:
+        Ref: PublicSubnetB
+      NetworkAclId:
+        Ref: PublicNetworkAcl
   PublicRouteTableBAssoc:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
@@ -181,6 +309,13 @@ Resources:
                 - !Ref "cidrBlockVpc"
                 - 4
                 - 11
+  PublicSubnetCNetworkAclAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      SubnetId:
+        Ref: PublicSubnetC
+      NetworkAclId:
+        Ref: PublicNetworkAcl
   PublicRouteTableCAssoc:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
@@ -232,6 +367,13 @@ Resources:
                 - !Ref "cidrBlockVpc"
                 - 4
                 - 11
+  PublicSubnetDNetworkAclAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      SubnetId:
+        Ref: PublicSubnetD
+      NetworkAclId:
+        Ref: PublicNetworkAcl
   PublicRouteTableDAssoc:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
@@ -283,6 +425,13 @@ Resources:
                 - !Ref "cidrBlockVpc"
                 - 4
                 - 11
+  PublicSubnetENetworkAclAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      SubnetId:
+        Ref: PublicSubnetE
+      NetworkAclId:
+        Ref: PublicNetworkAcl
   PublicRouteTableEAssoc:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
@@ -304,6 +453,39 @@ Resources:
     Type: AWS::EC2::EIP
     Properties:
       Domain: vpc
+  PrivateNetworkAcl:
+    Type: AWS::EC2::NetworkAcl
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: "Name"
+          Value: !Sub "${AWS::StackName}-Private"
+  InboundPrivateNetworkAclEntry:
+    Type: "AWS::EC2::NetworkAclEntry"
+    Properties:
+      NetworkAclId:
+        Ref: "PrivateNetworkAcl"
+      RuleNumber: 100
+      Protocol: -1
+      RuleAction: "allow"
+      Egress: False
+      CidrBlock: !Ref cidrBlockVpc
+      PortRange:
+        From: 0
+        To: 65535
+  OutboundPrivateNetworkAclEntry:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId:
+        Ref: "PrivateNetworkAcl"
+      RuleNumber: 100
+      Protocol: -1
+      RuleAction: "allow"
+      Egress: True
+      CidrBlock: 0.0.0.0/0
+      PortRange:
+        From: 0
+        To: 65535
   PrivateSubnetA:
     Type: AWS::EC2::Subnet
     Properties:
@@ -334,6 +516,13 @@ Resources:
                 - !Ref "cidrBlockVpc"
                 - 4
                 - 11
+  PrivateSubnetANetworkAclAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      SubnetId:
+        Ref: PrivateSubnetA
+      NetworkAclId:
+        Ref: PrivateNetworkAcl
   PrivateRouteTableAAssoc:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
@@ -389,6 +578,13 @@ Resources:
                 - !Ref "cidrBlockVpc"
                 - 4
                 - 11
+  PrivateSubnetBNetworkAclAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      SubnetId:
+        Ref: PrivateSubnetB
+      NetworkAclId:
+        Ref: PrivateNetworkAcl
   PrivateRouteTableBAssoc:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
@@ -444,6 +640,13 @@ Resources:
                 - !Ref "cidrBlockVpc"
                 - 4
                 - 11
+  PrivateSubnetCNetworkAclAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      SubnetId:
+        Ref: PrivateSubnetC
+      NetworkAclId:
+        Ref: PrivateNetworkAcl
   PrivateRouteTableCAssoc:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
@@ -499,6 +702,13 @@ Resources:
                 - !Ref "cidrBlockVpc"
                 - 4
                 - 11
+  PrivateSubnetDNetworkAclAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      SubnetId:
+        Ref: PrivateSubnetD
+      NetworkAclId:
+        Ref: PrivateNetworkAcl
   PrivateRouteTableDAssoc:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
@@ -554,6 +764,13 @@ Resources:
                 - !Ref "cidrBlockVpc"
                 - 4
                 - 11
+  PrivateSubnetENetworkAclAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      SubnetId:
+        Ref: PrivateSubnetE
+      NetworkAclId:
+        Ref: PrivateNetworkAcl
   PrivateRouteTableEAssoc:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
@@ -579,6 +796,39 @@ Resources:
       DestinationCidrBlock: 0.0.0.0/0
       NatGatewayId:
         Ref: NATE
+  DataNetworkAcl:
+    Type: AWS::EC2::NetworkAcl
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: "Name"
+          Value: !Sub "${AWS::StackName}-Data"
+  InboundDataNetworkAclEntry:
+    Type: "AWS::EC2::NetworkAclEntry"
+    Properties:
+      NetworkAclId:
+        Ref: "DataNetworkAcl"
+      RuleNumber: 100
+      Protocol: -1
+      RuleAction: "allow"
+      Egress: False
+      CidrBlock: !Ref cidrBlockVpc
+      PortRange:
+        From: 0
+        To: 65535
+  OutboundDataNetworkAclEntry:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId:
+        Ref: "DataNetworkAcl"
+      RuleNumber: 100
+      Protocol: -1
+      RuleAction: "allow"
+      Egress: True
+      CidrBlock: !Ref cidrBlockVpc
+      PortRange:
+        From: 0
+        To: 65535
   DataSubnetA:
     Type: AWS::EC2::Subnet
     Properties:
@@ -609,6 +859,13 @@ Resources:
                 - !Ref "cidrBlockVpc"
                 - 4
                 - 11
+  DataSubnetANetworkAclAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      SubnetId:
+        Ref: DataSubnetA
+      NetworkAclId:
+        Ref: DataNetworkAcl
   DataRouteTableAAssoc:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
@@ -646,6 +903,13 @@ Resources:
                 - !Ref "cidrBlockVpc"
                 - 4
                 - 11
+  DataSubnetBNetworkAclAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      SubnetId:
+        Ref: DataSubnetB
+      NetworkAclId:
+        Ref: DataNetworkAcl
   DataRouteTableBAssoc:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
@@ -683,6 +947,13 @@ Resources:
                 - !Ref "cidrBlockVpc"
                 - 4
                 - 11
+  DataSubnetCNetworkAclAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      SubnetId:
+        Ref: DataSubnetC
+      NetworkAclId:
+        Ref: DataNetworkAcl
   DataRouteTableCAssoc:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
@@ -720,6 +991,13 @@ Resources:
                 - !Ref "cidrBlockVpc"
                 - 4
                 - 11
+  DataSubnetDNetworkAclAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      SubnetId:
+        Ref: DataSubnetD
+      NetworkAclId:
+        Ref: DataNetworkAcl
   DataRouteTableDAssoc:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
@@ -757,6 +1035,13 @@ Resources:
                 - !Ref "cidrBlockVpc"
                 - 4
                 - 11
+  DataSubnetENetworkAclAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      SubnetId:
+        Ref: DataSubnetE
+      NetworkAclId:
+        Ref: DataNetworkAcl
   DataRouteTableEAssoc:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
@@ -765,6 +1050,11 @@ Resources:
       RouteTableId:
         Ref: NoInternetRouteTable
 Outputs:
+  VPCID:
+    Description: The VPC ID
+    Value: !Ref VPC
+    Export:
+      Name: !Sub "${AWS::StackName}-VPCID"
   PublicSubnetIDs:
     Description: A list of publicSubnetsIDs
     Value:

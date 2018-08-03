@@ -27,6 +27,7 @@ A picture is worth a thousand words (even in Yaml). This diagram shows the defau
 ## Limitations
 
 * More than one public, private or data layer is not possible.
+* No IPv6 support
 
 ## Defaults
 
@@ -56,6 +57,16 @@ When creating a /16 vpc with just 2 layers and 2 azs, will result in very large 
 ```
 layer_netmask: 20
 subnet_netmask: 24
+```
+
+### Other names for subnets
+
+If you don't like the names: public, private or data, you can change it. See example: custom-names.yml
+
+```
+public: lb
+private: app
+data: db
 ```
 
 ## Examples
