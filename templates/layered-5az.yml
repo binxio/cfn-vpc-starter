@@ -18,6 +18,7 @@ Resources:
     Type: AWS::EC2::VPC
     Properties:
       CidrBlock: !Ref cidrBlockVpc
+      EnableDnsHostnames: true
       Tags:
         - Key: "Name"
           Value: !Sub "${AWS::StackName}"
