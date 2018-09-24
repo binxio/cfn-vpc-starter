@@ -280,6 +280,64 @@ Resources:
     Type: AWS::EC2::EIP
     Properties:
       Domain: vpc
+  PublicSubnetC:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref "VPC"
+      AvailabilityZone: !Join ["", [!Ref "AWS::Region", "c"]]
+      CidrBlock:
+        !Select
+        - 2
+        - 'Fn::Cidr':
+            - !Select
+              - 0
+              - 'Fn::Cidr':
+                  - !Ref "cidrBlockVpc"
+                  - 4
+                  - 14
+            - 8
+            - 11
+      Tags:
+        - Key: "Name"
+          Value: !Sub "${AWS::StackName}-PublicSubnetC"
+        - Key: "Layer"
+          Value: "public"
+        - Key: "LayerCidr"
+          Value:
+            !Select
+            - 0
+            - 'Fn::Cidr':
+                - !Ref "cidrBlockVpc"
+                - 4
+                - 14
+  PublicSubnetCNetworkAclAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      SubnetId:
+        Ref: PublicSubnetC
+      NetworkAclId:
+        Ref: PublicNetworkAcl
+  PublicRouteTableCAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Ref: PublicSubnetC
+      RouteTableId:
+        Ref: PublicRouteTable
+  NATC:
+    DependsOn: GatewayAttachment
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !Sub "${EIPC.AllocationId}"
+      SubnetId:
+        Ref: PublicSubnetC
+      Tags:
+        - Key: "Name"
+          Value: !Sub "${AWS::StackName}-NATC"
+  EIPC:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
   PrivateNetworkAcl:
     Type: AWS::EC2::NetworkAcl
     Properties:
@@ -437,6 +495,68 @@ Resources:
       DestinationCidrBlock: 0.0.0.0/0
       NatGatewayId:
         Ref: NATB
+  PrivateSubnetC:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref "VPC"
+      AvailabilityZone: !Join ["", [!Ref "AWS::Region", "c"]]
+      CidrBlock:
+        !Select
+        - 2
+        - 'Fn::Cidr':
+            - !Select
+              - 1
+              - 'Fn::Cidr':
+                  - !Ref "cidrBlockVpc"
+                  - 4
+                  - 14
+            - 8
+            - 11
+      Tags:
+        - Key: "Name"
+          Value: !Sub "${AWS::StackName}-PrivateSubnetC"
+        - Key: "Layer"
+          Value: "private"
+        - Key: "LayerCidr"
+          Value:
+            !Select
+            - 1
+            - 'Fn::Cidr':
+                - !Ref "cidrBlockVpc"
+                - 4
+                - 14
+  PrivateSubnetCNetworkAclAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      SubnetId:
+        Ref: PrivateSubnetC
+      NetworkAclId:
+        Ref: PrivateNetworkAcl
+  PrivateRouteTableCAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Ref: PrivateSubnetC
+      RouteTableId:
+        Ref: PrivateRouteTableC
+  PrivateRouteTableC:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: VPC
+      Tags:
+        - Key: "Name"
+          Value: !Sub "${AWS::StackName}-PrivateRouteTableC"
+        - Key: "Layer"
+          Value: "private"
+  PrivateNATCRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId:
+        Ref: PrivateRouteTableC
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId:
+        Ref: NATC
 Outputs:
   VPCID:
     Description: The VPC ID
@@ -450,6 +570,7 @@ Outputs:
       - ', '
       - - !Ref "PublicSubnetA"
         - !Ref "PublicSubnetB"
+        - !Ref "PublicSubnetC"
     Export:
       Name: !Sub "${AWS::StackName}-publicSubnetIDs"
   PrivateSubnetIDs:
@@ -459,5 +580,6 @@ Outputs:
       - ', '
       - - !Ref "PrivateSubnetA"
         - !Ref "PrivateSubnetB"
+        - !Ref "PrivateSubnetC"
     Export:
       Name: !Sub "${AWS::StackName}-privateSubnetIDs"
