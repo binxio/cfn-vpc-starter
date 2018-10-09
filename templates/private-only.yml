@@ -104,7 +104,7 @@ Resources:
     Properties:
       NetworkAclId:
         Ref: "PrivateNetworkAcl"
-      RuleNumber: 100
+      RuleNumber: 110
       Protocol: -1
       RuleAction: "allow"
       Egress: False
